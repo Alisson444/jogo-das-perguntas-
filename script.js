@@ -60,23 +60,7 @@ const questions = [
 ]; 
 
 // ================== Variáveis Globais ==================
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
-
-const shuffledQuestions = questions.map(q => {
-    const choices = [...q.choices]; // copia as opções
-    const correctAnswer = choices[q.a]; // guarda a resposta correta original
-    shuffleArray(choices); // embaralha as alternativas
-    const newCorrectIndex = choices.indexOf(correctAnswer); // atualiza o índice correto
-    return { q: q.q, choices: choices, a: newCorrectIndex };
-});
-
-console.log(shuffledQuestions);
-
+let shuffledQuestions = [];
 let currentIndex = 0;
 let score = 0;
 let streak = 0;
