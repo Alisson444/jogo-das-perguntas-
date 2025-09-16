@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quizizz-like • Quiz de Conhecimentos Gerais</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>QuizMaster</h1>
+      <p class="subtitle">Teste seus conhecimentos gerais — rápido, divertido e com ranking!</p>
+    </header>
+
+    <!-- Tela inicial / configurações -->
+    <section id="start-screen" class="card">
+      <div class="controls">
+        <label>
+          Número de perguntas:
+          <select id="numQuestions">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+          </select>
+        </label>
+
+        <label>
+          Tempo por pergunta (segundos):
+          <input id="timePerQuestion" type="range" min="10" max="60" value="20" />
+          <span id="timeLabel">20s</span>
+        </label>
+
+        <label>
+          <input id="shuffleQuestions" type="checkbox" checked />
+          Embaralhar perguntas
+        </label>
+
+        <button id="startBtn" class="btn primary">Começar Quiz</button>
+      </div>
+
+      <div class="info">
+        <h3>Como funciona</h3>
+        <ul>
+          <li>Cada pergunta tem um contador; responda rápido para ganhar mais pontos.</li>
+          <li>Acertos somam pontos base + bônus de rapidez.</li>
+          <li>Ao terminar, salve seu nome no ranking (localStorage).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Tela de quiz -->
+    <section id="quiz-screen" class="card hidden">
+      <div class="top-row">
+        <div class="progress">Pergunta <span id="currentIndex">1</span>/<span id="totalQuestions">10</span></div>
+        <div class="score">Pontos: <span id="score">0</span></div>
+      </div>
+
+      <div class="question-area">
+        <div id="questionText" class="question">Pergunta aparecerá aqui</div>
+
+        <div id="choices" class="choices"></div>
+
+        <div class="meta">
+          <div class="timer">
+            <div id="timerBar" class="timer-bar"><div id="timerFill" class="timer-fill"></div></div>
+            <div class="timer-text"><span id="timeLeft">20</span>s</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resultado -->
+    <section id="result-screen" class="card hidden">
+      <h2>Fim do Quiz!</h2>
+      <p>Você fez <strong id="finalScore">0</strong> pontos.</p>
+
+      <label>
+        Digite seu nome para salvar no ranking:
+        <input id="playerName" type="text" maxlength="20" placeholder="Seu nome" />
+      </label>
+      <div class="result-buttons">
+        <button id="saveScoreBtn" class="btn primary">Salvar no ranking</button>
+        <button id="retryBtn" class="btn">Jogar de novo</button>
+        <button id="viewRankingBtn" class="btn">Ver ranking</button>
+      </div>
+    </section>
+
+    <!-- Ranking -->
+    <section id="ranking-screen" class="card hidden">
+      <h2>Ranking (Top 10)</h2>
+      <ol id="rankingList"></ol>
+      <div class="result-buttons">
+        <button id="backToStartBtn" class="btn">Voltar</button>
+        <button id="clearRankingBtn" class="btn danger">Limpar ranking</button>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <small>Feito com ❤️ — inspirado por plataformas de quiz gamificadas.</small>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
