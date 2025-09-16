@@ -1,442 +1,252 @@
-/* script.js
-  Quiz completo: timer, scoring, streak, import/export, ranking localStorage, keyboard controls.
-*/
+// ================== Perguntas ==================
+const questions = [
+  { q: "Qual é a capital do Brasil?", choices: ["São Paulo", "Brasília", "Rio de Janeiro", "Salvador"], a: 1 },
+  { q: "Qual destes planetas é conhecido como o Planeta Vermelho?", choices: ["Vênus", "Marte", "Júpiter", "Mercúrio"], a: 1 },
+  { q: "Em que continente fica o Egito?", choices: ["África", "Ásia", "Europa", "América"], a: 0 },
+  { q: "Quem foi o primeiro presidente dos EUA?", choices: ["George Washington", "Abraham Lincoln", "Thomas Jefferson", "John Adams"], a: 0 },
+  { q: "Qual é o maior oceano do mundo?", choices: ["Atlântico", "Índico", "Pacífico", "Ártico"], a: 2 },
+  { q: "Em que ano começou a Segunda Guerra Mundial?", choices: ["1914", "1939", "1945", "1929"], a: 1 },
+  { q: "Qual é a capital da França?", choices: ["Paris", "Londres", "Berlim", "Madri"], a: 0 },
+  { q: "Onde estão as pirâmides de Gizé?", choices: ["Egito", "México", "Peru", "China"], a: 0 },
+  { q: "Qual é o país mais populoso do mundo?", choices: ["Índia", "China", "EUA", "Rússia"], a: 1 },
+  { q: "Quem foi o descobridor do Brasil?", choices: ["Pedro Álvares Cabral", "Cristóvão Colombo", "Vasco da Gama", "Fernão de Magalhães"], a: 0 }
+];
+// =================================================
 
-(() => {
-  // ---- Elements
-  const startBtn = document.getElementById('startBtn');
-  const openEditorBtn = document.getElementById('openEditorBtn');
-  const openRankingBtn = document.getElementById('openRankingBtn');
+let shuffledQuestions = [];
+let currentIndex = 0;
+let score = 0;
+let streak = 0;
+let timerDuration = 20;
+let timerInterval;
+let lifelineUsed = false;
 
-  const panelStart = document.getElementById('panel-start');
-  const panelQuiz = document.getElementById('panel-quiz');
-  const panelResult = document.getElementById('panel-result');
-  const panelEditor = document.getElementById('panel-editor');
-  const panelRanking = document.getElementById('panel-ranking');
+const scoreEl = document.getElementById("score");
+const streakEl = document.getElementById("streak");
+const qCount = document.getElementById("qCount");
+const qCountLabel = document.getElementById("qCountLabel");
+const timerInput = document.getElementById("timer");
+const timerLabel = document.getElementById("timerLabel");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const gameEl = document.getElementById("game");
+const questionEl = document.getElementById("question");
+const choicesEl = document.getElementById("choices");
+const progressBar = document.getElementById("progressBar");
+const currentEl = document.getElementById("current");
+const totalEl = document.getElementById("total");
+const timeDisplay = document.getElementById("timeDisplay");
+const timerArc = document.getElementById("timerArc");
+const lifeline5050 = document.getElementById("lifeline5050");
+const skipBtn = document.getElementById("skipBtn");
 
-  const numQuestionsEl = document.getElementById('numQuestions');
-  const timePerQuestionEl = document.getElementById('timePerQuestion');
-  const timeLabel = document.getElementById('timeLabel');
-  const shuffleQuestionsEl = document.getElementById('shuffleQuestions');
-  const allowSkipEl = document.getElementById('allowSkip');
-  const immediateFeedbackEl = document.getElementById('immediateFeedback');
+const resultEl = document.getElementById("result");
+const finalScoreEl = document.getElementById("finalScore");
+const finalCorrectEl = document.getElementById("finalCorrect");
+const finalTotalEl = document.getElementById("finalTotal");
+const playerNameEl = document.getElementById("playerName");
+const saveBtn = document.getElementById("saveBtn");
+const playAgainBtn = document.getElementById("playAgain");
+const shareBtn = document.getElementById("shareScore");
+const lastPointsEl = document.getElementById("lastPoints");
 
-  const currentIndexEl = document.getElementById('currentIndex');
-  const totalQuestionsEl = document.getElementById('totalQuestions');
-  const progressFill = document.getElementById('progressFill');
-  const questionText = document.getElementById('questionText');
-  const choicesEl = document.getElementById('choices');
-  const timerBar = document.getElementById('timerBar');
-  const timeLeftEl = document.getElementById('timeLeft');
-  const scoreEl = document.getElementById('score');
-  const streakEl = document.getElementById('streak');
-  const skipBtn = document.getElementById('skipBtn');
-  const nextBtn = document.getElementById('nextBtn');
+const leaderList = document.getElementById("leaderList");
+const clearBoardBtn = document.getElementById("clearBoard");
+const exportBtn = document.getElementById("exportRank");
+const importBtn = document.getElementById("importBtn");
+const importFile = document.getElementById("importFile");
 
-  const finalScoreEl = document.getElementById('finalScore');
-  const summaryCorrect = document.getElementById('summaryCorrect');
-  const summaryWrong = document.getElementById('summaryWrong');
-  const summaryAvgTime = document.getElementById('summaryAvgTime');
-  const summaryMaxStreak = document.getElementById('summaryMaxStreak');
-  const playerNameInput = document.getElementById('playerName');
-  const saveScoreBtn = document.getElementById('saveScoreBtn');
-  const playAgainBtn = document.getElementById('playAgainBtn');
-  const backToStartBtn = document.getElementById('backToStartBtn');
+// ================= Utilitários ==================
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
+}
+function formatTime(sec) {
+  const m = String(Math.floor(sec / 60)).padStart(2,"0");
+  const s = String(sec % 60).padStart(2,"0");
+  return `${m}:${s}`;
+}
+function updateProgress() {
+  progressBar.style.width = `${(currentIndex / shuffledQuestions.length) * 100}%`;
+  currentEl.textContent = currentIndex + 1;
+  totalEl.textContent = shuffledQuestions.length;
+}
+function updateScoreDisplay() {
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+}
+// ================= Timer ==================
+function startTimer() {
+  let timeLeft = timerDuration;
+  timeDisplay.textContent = formatTime(timeLeft);
+  updateTimerArc(1);
 
-  const editorJson = document.getElementById('editorJson');
-  const loadEditorBtn = document.getElementById('loadEditorBtn');
-  const exportBtn = document.getElementById('exportBtn');
-  const fileInput = document.getElementById('fileInput');
-  const editorBackBtn = document.getElementById('editorBackBtn');
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timeDisplay.textContent = formatTime(timeLeft);
+    updateTimerArc(timeLeft / timerDuration);
 
-  const rankingList = document.getElementById('rankingList');
-  const clearRankingBtn = document.getElementById('clearRankingBtn');
-  const rankingBackBtn = document.getElementById('rankingBackBtn');
-
-  // ---- State
-  let questionsPool = []; // default loaded below
-  let quiz = [];
-  let totalQuestions = 10;
-  let timePerQuestion = 20;
-  let currentIndex = 0;
-  let score = 0;
-  let streak = 0;
-  let maxStreak = 0;
-  let correctCount = 0;
-  let wrongCount = 0;
-  let times = []; // times per question
-  let timerId = null;
-  let startedAt = 0;
-  let allowSkip = false;
-  let immediateFeedback = true;
-
-  // ---- sample questions (you can replace via editor/import)
-  questionsPool = [
-    { q: "Qual é a capital do Brasil?", choices: ["São Paulo","Brasília","Rio de Janeiro","Salvador"], a: 1 },
-    { q: "Em que ano o homem pisou na Lua pela primeira vez?", choices: ["1959","1969","1979","1989"], a: 1 },
-    { q: "Qual o maior oceano do planeta?", choices: ["Atlântico","Índico","Ártico","Pacífico"], a: 3 },
-    { q: "Quem pintou a Mona Lisa?", choices: ["Michelangelo","Picasso","Leonardo da Vinci","Van Gogh"], a: 2 },
-    { q: "Qual é a unidade básica da vida?", choices: ["Órgão","Célula","Molécula","Sistema"], a: 1 },
-    { q: "Qual gás é essencial para a respiração humana?", choices: ["Dióxido de carbono","Nitrogênio","Oxigênio","Hélio"], a: 2 },
-    { q: "Quem escreveu 'Dom Casmurro'?", choices: ["Machado de Assis","Jorge Amado","Clarice Lispector","Paulo Coelho"], a: 0 },
-    { q: "Qual planeta é conhecido como Planeta Vermelho?", choices: ["Vênus","Marte","Júpiter","Mercúrio"], a: 1 },
-    { q: "Qual é a capital da França?", choices: ["Lyon","Marseille","Paris","Bordeaux"], a: 2 },
-    { q: "O que significa HTTP?", choices: ["HyperText Transfer Protocol","Home Transfer Text Protocol","Hyperlink Text Transfer Program","Hyper Transfer Text Protocol"], a: 0 },
-    { q: "Quem compôs 'Für Elise'?", choices: ["Mozart","Bach","Beethoven","Chopin"], a: 2 },
-    { q: "Qual metal é líquido à temperatura ambiente?", choices: ["Ferro","Prata","Mercúrio","Ouro"], a: 2 },
-    { q: "Qual é o símbolo químico do Oxigênio?", choices: ["O","Ox","Og","Oxg"], a: 0 },
-    { q: "Quantos segundos há em uma hora?", choices: ["3600","600","1800","7200"], a: 0 },
-    { q: "Em computação, o que significa RAM?", choices: ["Readily Accessible Memory","Random Access Memory","Read Access Module","Remote Access Memory"], a: 1 },
-    { q: "Qual continente tem o maior número de países?", choices: ["África","Ásia","Europa","América"], a: 0 },
-    { q: "Qual esporte usa raquetes e uma rede central?", choices: ["Futebol","Tênis","Natação","Boxe"], a: 1 },
-    { q: "Qual é a capital do Japão?", choices: ["Seul","Tóquio","Pequim","Osaka"], a: 1 },
-    { q: "Quem pintou 'A Noite Estrelada'?", choices: ["Van Gogh","Picasso","Monet","Rembrandt"], a: 0 },
-    { q: "Qual a fórmula da água?", choices: ["CO2","H2O","NaCl","O2"], a: 1 }
-  ];
-
-  // ---- utils
-  function show(el){ el.classList.remove('hidden'); }
-  function hide(el){ el.classList.add('hidden'); }
-  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-  function shuffle(arr){
-    for(let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]]=[arr[j],arr[i]];
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      handleAnswer(-1);
     }
-  }
+  }, 1000);
+}
+function updateTimerArc(ratio) {
+  const circumference = 2 * Math.PI * 16;
+  timerArc.setAttribute("d", "M18 2a16 16 0 1 1 0 32a16 16 0 1 1 0-32");
+  timerArc.style.stroke = "url(#grad)";
+  timerArc.style.strokeDasharray = circumference;
+  timerArc.style.strokeDashoffset = circumference * (1 - ratio);
+}
+// ================= Game Flow ==================
+function startGame() {
+  shuffledQuestions = shuffle([...questions]).slice(0, parseInt(qCount.value));
+  currentIndex = 0;
+  score = 0;
+  streak = 0;
+  lifelineUsed = false;
 
-  // ---- settings listeners
-  timePerQuestionEl.addEventListener('input', ()=> {
-    timeLabel.textContent = timePerQuestionEl.value + 's';
+  updateScoreDisplay();
+  resultEl.classList.add("hidden");
+  gameEl.classList.remove("hidden");
+
+  showQuestion();
+}
+function showQuestion() {
+  clearInterval(timerInterval);
+  const q = shuffledQuestions[currentIndex];
+  questionEl.textContent = q.q;
+  choicesEl.innerHTML = "";
+  q.choices.forEach((choice, i) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.textContent = choice;
+    btn.onclick = () => handleAnswer(i);
+    choicesEl.appendChild(btn);
   });
+  updateProgress();
+  startTimer();
+}
+function handleAnswer(i) {
+  clearInterval(timerInterval);
+  const q = shuffledQuestions[currentIndex];
+  const correct = q.a;
 
-  // ---- start game
-  startBtn.addEventListener('click', ()=> {
-    totalQuestions = parseInt(numQuestionsEl.value,10);
-    timePerQuestion = parseInt(timePerQuestionEl.value,10);
-    allowSkip = allowSkipEl.checked;
-    immediateFeedback = immediateFeedbackEl.checked;
-
-    // prepare quiz
-    quiz = questionsPool.slice();
-    if (shuffleQuestionsEl.checked) shuffle(quiz);
-    quiz = quiz.slice(0, totalQuestions);
-
-    // reset stats
-    currentIndex = 0; score = 0; streak = 0; maxStreak = 0; correctCount = 0; wrongCount = 0; times = [];
-    scoreEl.textContent = score; streakEl.textContent = streak;
-    totalQuestionsEl.textContent = totalQuestions;
-
-    // show quiz
-    hide(panelStart); hide(panelResult); hide(panelRanking); hide(panelEditor);
-    show(panelQuiz);
-
-    renderQuestion();
-  });
-
-  // ---- render question
-  function renderQuestion(){
-    const item = quiz[currentIndex];
-    currentIndexEl.textContent = (currentIndex+1);
-    // progress
-    const perc = Math.round((currentIndex/totalQuestions)*100);
-    progressFill.style.width = perc + '%';
-
-    questionText.textContent = item.q || 'Pergunta vazia';
-    choicesEl.innerHTML = '';
-
-    // create buttons for choices
-    item.choices.forEach((c, idx) => {
-      const btn = document.createElement('button');
-      btn.className = 'choice';
-      btn.dataset.index = idx;
-      btn.innerHTML = `<span class="choice-index">${idx+1}.</span><span class="choice-text">${c}</span>`;
-      btn.addEventListener('click', ()=> selectChoice(idx));
-      choicesEl.appendChild(btn);
-    });
-
-    // controls visibility
-    skipBtn.style.display = allowSkip ? 'inline-block' : 'none';
-    nextBtn.classList.add('hidden');
-
-    // start timer
-    startTimer();
-  }
-
-  // ---- timer
-  function startTimer(){
-    clearInterval(timerId);
-    let start = Date.now();
-    let total = timePerQuestion * 1000;
-    timeLeftEl.textContent = Math.ceil(total/1000);
-    timerBar.style.width = '100%';
-    // smooth tick
-    timerId = setInterval(()=>{
-      const elapsed = Date.now() - start;
-      const remain = clamp(total - elapsed, 0, total);
-      const pct = (remain/total)*100;
-      timerBar.style.width = pct + '%';
-      timeLeftEl.textContent = Math.ceil(remain/1000);
-
-      // pulse when <5s
-      if (remain <= 5000) {
-        timerBar.classList.add('pulse');
-      } else {
-        timerBar.classList.remove('pulse');
-      }
-
-      if (remain <= 0){
-        clearInterval(timerId);
-        handleNoAnswer();
-      }
-    }, 100);
-    startedAt = Date.now();
-  }
-
-  // ---- when time runs out
-  function handleNoAnswer(){
-    times.push(timePerQuestion); // max time used
-    wrongCount++;
-    streak = 0;
-    streakEl.textContent = streak;
-    showCorrectAnswerVisual(null);
-    proceedAfterAnswer();
-  }
-
-  // ---- choice selection
-  function selectChoice(idx){
-    clearInterval(timerId);
-    const item = quiz[currentIndex];
-    const elapsed = (Date.now() - startedAt)/1000;
-    times.push(elapsed);
-    const correctIdx = item.a;
-
-    if (idx === correctIdx){
-      handleCorrect(elapsed);
-    } else {
-      handleWrong(idx, correctIdx);
-    }
-  }
-
-  function handleCorrect(elapsed){
-    correctCount++;
+  let gained = 0;
+  if (i === correct) {
     streak++;
-    maxStreak = Math.max(maxStreak, streak);
-    streakEl.textContent = streak;
-
-    // scoring: base 100 + time bonus (max 400) + streak multiplier (10% per streak)
-    const base = 100;
-    const timeBonus = Math.round(400 * ((timePerQuestion - elapsed) / timePerQuestion));
-    const streakMultiplier = 1 + (0.10 * (streak-1)); // 10% for each combo after the first
-    const gained = Math.round((base + Math.max(0, timeBonus)) * streakMultiplier);
-
+    gained = 100 + (streak * 10);
     score += gained;
-    scoreEl.textContent = score;
-
-    // show feedback
-    showCorrectAnswerVisual(true);
-    // if immediate feedback, wait then next
-    if (immediateFeedback) {
-      setTimeout(proceedAfterAnswer, 700);
-    } else {
-      nextBtn.classList.remove('hidden');
-    }
-  }
-
-  function handleWrong(chosenIdx, correctIdx){
-    wrongCount++;
+    highlightAnswer(correct,"correct");
+    lastPointsEl.textContent = `+${gained}`;
+  } else {
     streak = 0;
-    streakEl.textContent = streak;
-
-    // partial or zero points for wrong
-    // show feedback
-    showCorrectAnswerVisual(chosenIdx);
-    if (immediateFeedback) {
-      setTimeout(proceedAfterAnswer, 900);
-    } else {
-      nextBtn.classList.remove('hidden');
-    }
+    highlightAnswer(correct,"correct");
+    if (i >= 0) highlightAnswer(i,"wrong");
+    lastPointsEl.textContent = "0";
   }
+  updateScoreDisplay();
 
-  function showCorrectAnswerVisual(chosenIdxOrBool){
-    const item = quiz[currentIndex];
-    const buttons = Array.from(choicesEl.querySelectorAll('.choice'));
-    buttons.forEach(btn => btn.classList.add('disabled'));
-    buttons.forEach(btn => {
-      const idx = parseInt(btn.dataset.index,10);
-      if (idx === item.a) btn.classList.add('correct');
-      if (typeof chosenIdxOrBool === 'number' && idx === chosenIdxOrBool && idx !== item.a) btn.classList.add('wrong');
-      if (chosenIdxOrBool === null && idx === item.a) btn.classList.add('correct');
-    });
-  }
-
-  // ---- proceed to next or finish
-  function proceedAfterAnswer(){
+  setTimeout(() => {
     currentIndex++;
-    if (currentIndex >= totalQuestions) {
-      finishQuiz();
-      return;
+    if (currentIndex < shuffledQuestions.length) {
+      showQuestion();
+    } else {
+      endGame();
     }
-    renderQuestion();
+  }, 1200);
+}
+function highlightAnswer(index, cls) {
+  const btns = document.querySelectorAll(".choice-btn");
+  if (btns[index]) btns[index].classList.add(cls);
+}
+function endGame() {
+  gameEl.classList.add("hidden");
+  resultEl.classList.remove("hidden");
+
+  finalScoreEl.textContent = score;
+  finalCorrectEl.textContent = shuffledQuestions.filter((q, i) => q.a === -1 ? false : true).length;
+  finalTotalEl.textContent = shuffledQuestions.length;
+}
+// ================= Ranking ==================
+function saveScore() {
+  const name = playerNameEl.value.trim() || "Jogador";
+  const board = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  board.push({ name, score });
+  board.sort((a,b)=>b.score-a.score);
+  localStorage.setItem("leaderboard", JSON.stringify(board));
+  renderBoard();
+}
+function renderBoard() {
+  const board = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  leaderList.innerHTML = "";
+  board.slice(0,10).forEach(item=>{
+    const li = document.createElement("li");
+    li.textContent = `${item.name} — ${item.score} pts`;
+    leaderList.appendChild(li);
+  });
+}
+function clearBoard() {
+  localStorage.removeItem("leaderboard");
+  renderBoard();
+}
+function exportBoard() {
+  const data = localStorage.getItem("leaderboard") || "[]";
+  const blob = new Blob([data],{type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ranking.json";
+  a.click();
+}
+function importBoard(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    localStorage.setItem("leaderboard", evt.target.result);
+    renderBoard();
+  };
+  reader.readAsText(file);
+}
+// ================= Listeners ==================
+qCount.addEventListener("input",()=>qCountLabel.textContent=qCount.value);
+timerInput.addEventListener("input",()=>{timerLabel.textContent=timerInput.value;timerDuration=parseInt(timerInput.value)});
+startBtn.addEventListener("click", startGame);
+pauseBtn.addEventListener("click", ()=>clearInterval(timerInterval));
+lifeline5050.addEventListener("click", ()=>{
+  if(lifelineUsed) return;
+  lifelineUsed = true;
+  const q = shuffledQuestions[currentIndex];
+  const wrong = q.choices.map((_,i)=>i).filter(i=>i!==q.a);
+  shuffle(wrong).slice(0,2).forEach(i=>{
+    const btns=document.querySelectorAll(".choice-btn");
+    if(btns[i]) btns[i].disabled=true;
+  });
+});
+skipBtn.addEventListener("click", ()=>{
+  if(score>=200){
+    score -= 200;
+    updateScoreDisplay();
+    currentIndex++;
+    if(currentIndex < shuffledQuestions.length){
+      showQuestion();
+    }else{
+      endGame();
+    }
   }
+});
+saveBtn.addEventListener("click", saveScore);
+playAgainBtn.addEventListener("click", startGame);
+shareBtn.addEventListener("click", ()=>{
+  const text = `Fiz ${score} pontos no Neon Quiz!`;
+  navigator.clipboard.writeText(text);
+  alert("Resultado copiado para compartilhar!");
+});
+clearBoardBtn.addEventListener("click", clearBoard);
+exportBtn.addEventListener("click", exportBoard);
+importBtn.addEventListener("click", ()=>importFile.click());
+importFile.addEventListener("change", importBoard);
 
-  function finishQuiz(){
-    clearInterval(timerId);
-    // progress to 100
-    progressFill.style.width = '100%';
-    hide(panelQuiz);
-    show(panelResult);
-
-    finalScoreEl.textContent = score;
-    summaryCorrect.textContent = correctCount;
-    summaryWrong.textContent = wrongCount;
-    summaryMaxStreak.textContent = maxStreak;
-    const avg = times.length ? (times.reduce((a,b)=>a+b,0)/times.length).toFixed(1) : 0;
-    summaryAvgTime.textContent = avg;
-  }
-
-  // ---- skip button
-  skipBtn.addEventListener('click', ()=>{
-    if (!allowSkip) return;
-    clearInterval(timerId);
-    times.push(timePerQuestion);
-    wrongCount++;
-    streak = 0; streakEl.textContent = streak;
-    showCorrectAnswerVisual(null);
-    setTimeout(proceedAfterAnswer, 400);
-  });
-
-  // ---- next button (when immediateFeedback disabled)
-  nextBtn.addEventListener('click', ()=> {
-    proceedAfterAnswer();
-    nextBtn.classList.add('hidden');
-  });
-
-  // ---- keyboard shortcuts 1-4
-  window.addEventListener('keydown', (e)=>{
-    if (panelQuiz.classList.contains('hidden')) return;
-    const key = e.key;
-    if (['1','2','3','4'].includes(key)){
-      const idx = parseInt(key,10)-1;
-      const btn = choicesEl.querySelector(`.choice[data-index="${idx}"]`);
-      if (btn && !btn.classList.contains('disabled')) btn.click();
-    }
-    if (key === ' '){ // space = skip
-      if (allowSkip) skipBtn.click();
-    }
-  });
-
-  // ---- ranking (localStorage)
-  function getRanking(){ try { return JSON.parse(localStorage.getItem('quiz-ranking')||'[]'); } catch { return []; } }
-  function saveRanking(list){ localStorage.setItem('quiz-ranking', JSON.stringify(list)); }
-
-  saveScoreBtn.addEventListener('click', ()=>{
-    const name = (playerNameInput.value || 'Anônimo').trim();
-    const list = getRanking();
-    list.push({ name, score, date: new Date().toISOString(), correct: correctCount, wrong: wrongCount });
-    list.sort((a,b)=> b.score - a.score);
-    saveRanking(list.slice(0,10));
-    openRankingPanel();
-  });
-
-  // ---- editor / import / export
-  openEditorBtn.addEventListener('click', ()=> {
-    hide(panelStart); hide(panelQuiz); hide(panelResult); hide(panelRanking);
-    show(panelEditor);
-    // show JSON current pool
-    editorJson.value = JSON.stringify(questionsPool, null, 2);
-  });
-
-  loadEditorBtn.addEventListener('click', ()=> {
-    try {
-      const parsed = JSON.parse(editorJson.value);
-      if (!Array.isArray(parsed)) throw new Error('JSON deve ser um array');
-      // basic validation
-      parsed.forEach((it, i) => {
-        if (typeof it.q !== 'string' || !Array.isArray(it.choices) || typeof it.a !== 'number') {
-          throw new Error(`Item ${i} inválido`);
-        }
-      });
-      questionsPool = parsed;
-      alert('Quiz carregado com sucesso! Agora volte e clique em Começar.');
-      editorBackBtn.click();
-    } catch (err) {
-      alert('Erro ao carregar JSON: ' + err.message);
-    }
-  });
-
-  exportBtn.addEventListener('click', ()=>{
-    const data = JSON.stringify(questionsPool, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'quiz.json'; a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  fileInput.addEventListener('change', (ev)=>{
-    const f = ev.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      editorJson.value = e.target.result;
-      alert('Arquivo carregado no editor. Clique em "Carregar para usar".');
-    };
-    reader.readAsText(f);
-  });
-
-  editorBackBtn.addEventListener('click', ()=> {
-    hide(panelEditor); hide(panelQuiz); hide(panelResult); hide(panelRanking);
-    show(panelStart);
-  });
-
-  // ---- ranking panel
-  openRankingBtn.addEventListener('click', openRankingPanel);
-  function openRankingPanel(){
-    hide(panelStart); hide(panelQuiz); hide(panelResult); hide(panelEditor);
-    show(panelRanking);
-    renderRanking();
-  }
-  rankingBackBtn.addEventListener('click', ()=>{
-    hide(panelRanking); show(panelStart);
-  });
-
-  clearRankingBtn.addEventListener('click', ()=> {
-    if (confirm('Limpar ranking?')) {
-      localStorage.removeItem('quiz-ranking');
-      renderRanking();
-    }
-  });
-
-  function renderRanking(){
-    const list = getRanking();
-    rankingList.innerHTML = '';
-    if (list.length === 0){
-      rankingList.innerHTML = '<li>Nenhum resultado ainda.</li>';
-      return;
-    }
-    list.forEach(entry=>{
-      const when = new Date(entry.date);
-      const li = document.createElement('li');
-      li.textContent = `${entry.name} — ${entry.score} pts — acertos: ${entry.correct || 0} — ${when.toLocaleString()}`;
-      rankingList.appendChild(li);
-    });
-  }
-
-  // ---- play again / back to start
-  playAgainBtn.addEventListener('click', ()=>{
-    hide(panelResult); show(panelStart);
-  });
-  backToStartBtn.addEventListener('click', ()=>{
-    hide(panelResult); hide(panelQuiz); hide(panelRanking); hide(panelEditor);
-    show(panelStart);
-  });
-
-  // ---- helper open ranking externally
-  function openRankingPanel(){ hide(panelStart); hide(panelQuiz); hide(panelResult); hide(panelEditor); show(panelRanking); renderRanking(); }
-
-  // ---- initial UI
-  hide(panelQuiz); hide(panelResult); hide(panelEditor); hide(panelRanking);
-  timeLabel.textContent = timePerQuestionEl.value + 's';
-
-})();
+// ================= Init ==================
+renderBoard();

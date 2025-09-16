@@ -3,148 +3,109 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>QuizMaster • Quiz estilo Quizizz</title>
+  <title>Neon Quiz — Versão Pro</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <canvas id="confettiCanvas" class="confetti"></canvas>
   <main class="app">
-    <header class="topbar">
-      <h1>QuizMaster</h1>
-      <p class="tag">Quiz de conhecimentos gerais — rápido e responsivo</p>
+    <header class="brand">
+      <div class="logo">
+        <h1>Neon Quiz</h1>
+        <p class="subtitle">História & Geografia — Neon Edition</p>
+      </div>
+      <div class="top-controls">
+        <button id="soundToggle" class="icon">🔊</button>
+        <button id="exportRank" class="small btn">Exportar ranking</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <button id="importBtn" class="small btn">Importar ranking</button>
+      </div>
     </header>
 
-    <!-- START / CONFIG -->
-    <section id="panel-start" class="card">
-      <div class="left">
-        <h2>Configurações</h2>
-        <label>Quantidade de perguntas
-          <select id="numQuestions">
-            <option value="5">5</option>
-            <option value="10" selected>10</option>
-            <option value="15">15</option>
-            <option value="20">20</option>
-            <option value="30">30</option>
-          </select>
-        </label>
-
-        <label>Tempo por pergunta: <span id="timeLabel">20s</span>
-          <input id="timePerQuestion" type="range" min="8" max="60" value="20" />
-        </label>
-
-        <label><input id="shuffleQuestions" type="checkbox" checked /> Embaralhar perguntas</label>
-        <label><input id="allowSkip" type="checkbox" /> Permitir pular pergunta</label>
-        <label><input id="immediateFeedback" type="checkbox" checked /> Feedback imediato (mostrar certo/errado)</label>
-
-        <div class="start-buttons">
-          <button id="startBtn" class="btn primary">Começar</button>
-          <button id="openEditorBtn" class="btn">Editor / Importar</button>
-          <button id="openRankingBtn" class="btn">Ranking</button>
-        </div>
+    <section class="controls">
+      <div class="scorebox">
+        <div>Score: <span id="score">0</span></div>
+        <div>Streak: <span id="streak">0</span></div>
       </div>
 
-      <div class="right">
-        <h3>Estatísticas rápidas</h3>
-        <ul class="stats">
-          <li>Pontuação por acerto: base 100</li>
-          <li>Bônus por rapidez: até +400 (quanto mais rápido, mais ganha)</li>
-          <li>Combo (streak): +10% por combo ativo</li>
-        </ul>
-        <p class="muted">Use o editor para importar seu próprio quiz em JSON (formato: [{q,choices,a, img?}, ...]).</p>
+      <div class="settings">
+        <label>Qtd perguntas: <span id="qCountLabel">10</span></label>
+        <input id="qCount" type="range" min="5" max="50" value="10" />
+
+        <label>Tempo por pergunta (s): <span id="timerLabel">20</span></label>
+        <input id="timer" type="range" min="5" max="60" value="20" />
+
+        <div class="action-row">
+          <button id="startBtn" class="btn">Começar</button>
+          <button id="pauseBtn" class="btn muted">Pausar</button>
+        </div>
       </div>
     </section>
 
-    <!-- QUIZ -->
-    <section id="panel-quiz" class="card hidden">
-      <div class="quiz-header">
+    <section class="game hidden" id="game">
+      <div class="hud">
         <div class="progress">
-          <div class="progress-text">Pergunta <strong id="currentIndex">1</strong>/<span id="totalQuestions">10</span></div>
-          <div class="progress-bar"><div id="progressFill"></div></div>
+          <div id="progressBar" class="progress-bar"></div>
         </div>
 
-        <div class="score-area">
-          <div class="score">Pontos: <span id="score">0</span></div>
-          <div class="streak">Streak: <span id="streak">0</span></div>
-        </div>
+        <div class="meta">Pergunta <span id="current">1</span> / <span id="total">10</span></div>
       </div>
 
-      <div class="question-card">
-        <div class="question-top">
-          <div id="questionText" class="question-text">Pergunta será exibida aqui</div>
+      <div class="question-area">
+        <h2 id="question">Pergunta será aqui</h2>
+        <img id="qImage" class="q-image hidden" alt="imagem da pergunta" />
+
+        <div id="choices" class="choices"></div>
+
+        <div class="utility-row">
           <div class="timer-wrap">
-            <div class="timer-num" id="timeLeft">20</div>
-            <div class="timer-bar-outer"><div id="timerBar" class="timer-bar-inner"></div></div>
+            <div id="circularTimer" class="circular-timer" aria-hidden="true">
+              <svg viewBox="0 0 36 36">
+                <path class="bg" d="M18 2a16 16 0 1 1 0 32a16 16 0 1 1 0-32" />
+                <path id="timerArc" class="arc" d=""/>
+              </svg>
+            </div>
+            <div id="timeDisplay">00:20</div>
           </div>
+
+          <div class="tools">
+            <button id="lifeline5050" class="small btn">50/50</button>
+            <button id="skipBtn" class="small btn">Pular (-200 pts)</button>
+          </div>
+
+          <div class="small-info">Pontos: <span id="lastPoints">0</span></div>
         </div>
 
-        <div id="choices" class="choices-grid" aria-label="Opções">
-          <!-- botões de escolha criados dinamicamente -->
-        </div>
-
-        <div class="quiz-actions">
-          <button id="skipBtn" class="btn" title="Pular pergunta">Pular</button>
-          <button id="nextBtn" class="btn primary hidden">Próxima</button>
-        </div>
       </div>
     </section>
 
-    <!-- RESULT -->
-    <section id="panel-result" class="card hidden">
-      <h2>Resultado</h2>
-      <p>Você fez <strong id="finalScore">0</strong> pontos.</p>
-      <div class="summary">
-        <p>Acertos: <span id="summaryCorrect">0</span></p>
-        <p>Erros: <span id="summaryWrong">0</span></p>
-        <p>Tempo médio: <span id="summaryAvgTime">0</span>s</p>
-        <p>Maior streak: <span id="summaryMaxStreak">0</span></p>
+    <section id="result" class="result hidden">
+      <h2>Resultados</h2>
+      <p>Você fez <strong id="finalScore">0</strong> pontos</p>
+      <p>Acertos: <span id="finalCorrect">0</span> / <span id="finalTotal">0</span></p>
+
+      <div class="save-row">
+        <input id="playerName" placeholder="Seu nome (max 12)" maxlength="12" />
+        <button id="saveBtn" class="btn">Salvar no ranking</button>
       </div>
 
-      <label>Nome para salvar no ranking:
-        <input id="playerName" type="text" maxlength="20" placeholder="Seu nome" />
-      </label>
-      <div class="start-buttons">
-        <button id="saveScoreBtn" class="btn primary">Salvar no ranking</button>
-        <button id="playAgainBtn" class="btn">Jogar novamente</button>
-        <button id="backToStartBtn" class="btn">Voltar</button>
+      <div class="result-actions">
+        <button id="playAgain" class="btn">Jogar novamente</button>
+        <button id="shareScore" class="btn muted">Compartilhar resultados</button>
       </div>
     </section>
 
-    <!-- EDITOR / IMPORT -->
-    <section id="panel-editor" class="card hidden">
-      <h2>Editor / Importar & Exportar</h2>
-      <p class="muted">Edite o JSON do quiz (array de objetos). Cada objeto: <code>{ q: "pergunta", choices: ["a","b","c","d"], a: 0 }</code> (opcional: img: "url").</p>
-
-      <textarea id="editorJson" placeholder='[{"q":"Exemplo?","choices":["A","B","C","D"],"a":1}]'></textarea>
-
-      <div class="editor-actions">
-        <button id="loadEditorBtn" class="btn primary">Carregar para usar</button>
-        <button id="exportBtn" class="btn">Exportar JSON</button>
-        <label class="file-label">
-          <input id="fileInput" type="file" accept="application/json" />
-          Carregar arquivo JSON
-        </label>
+    <aside class="leaderboard">
+      <h3>Ranking local</h3>
+      <ol id="leaderList"></ol>
+      <div class="board-actions">
+        <button id="clearBoard" class="btn small muted">Limpar ranking</button>
       </div>
+    </aside>
 
-      <div class="editor-note muted">Dica: mantenha escolhas com 3–4 itens. Índice da resposta (a) começa em 0.</div>
-      <div class="start-buttons">
-        <button id="editorBackBtn" class="btn">Voltar</button>
-      </div>
-    </section>
-
-    <!-- RANKING -->
-    <section id="panel-ranking" class="card hidden">
-      <h2>Ranking (Top 10)</h2>
-      <ol id="rankingList" class="ranking-list"></ol>
-      <div class="start-buttons">
-        <button id="clearRankingBtn" class="btn danger">Limpar ranking</button>
-        <button id="rankingBackBtn" class="btn">Voltar</button>
-      </div>
-    </section>
-
-    <footer class="footer">
-      <small>Feito para você — diga se quer trocar as cores ou eu ajustar algo do gameplay.</small>
-    </footer>
+    <footer class="credits">Feito com ⚡ por você — tema neon</footer>
   </main>
 
-  <script src="script.js" defer></script>
+  <script src="script.js"></script>
 </body>
 </html>
