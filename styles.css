@@ -16,52 +16,90 @@ body {
   padding: 20px;
 }
 
-/* ================= Container ================= */
-.container {
-  background: rgba(10, 20, 40, 0.8);
-  border: 2px solid #1e90ff;
-  border-radius: 18px;
-  box-shadow: 0 0 25px #1e90ff55, 0 0 60px #00cfff33 inset;
-  padding: 30px;
+.app {
   width: 100%;
-  max-width: 850px;
-  backdrop-filter: blur(12px);
-  animation: fadeIn 1s ease-out;
+  max-width: 900px;
 }
 
-h1 {
-  text-align: center;
+/* ================= Header ================= */
+header.brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.logo h1 {
   font-size: 2.5rem;
-  margin-bottom: 15px;
   color: #00cfff;
   text-shadow: 0 0 12px #1e90ff, 0 0 22px #00cfff;
+}
+
+.logo .subtitle {
+  font-size: 1rem;
+  color: #a6d8ff;
+  text-shadow: 0 0 6px #00cfff77;
+}
+
+.top-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.top-controls button,
+.top-controls input[type="file"] {
+  font-size: 0.9rem;
 }
 
 /* ================= Controls ================= */
 .controls {
   display: flex;
+  justify-content: space-between;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 15px;
   margin-bottom: 25px;
+  gap: 20px;
+  background: rgba(10, 20, 40, 0.7);
+  padding: 15px 20px;
+  border-radius: 16px;
+  border: 2px solid #1e90ff;
+  box-shadow: 0 0 25px #00cfff33 inset;
 }
 
-label {
+.scorebox {
+  display: flex;
+  gap: 25px;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.settings label {
   font-size: 0.9rem;
   color: #a6d8ff;
+  margin-top: 5px;
+  display: block;
 }
 
 input[type="range"] {
-  width: 140px;
+  width: 160px;
+  margin-top: 5px;
   accent-color: #00cfff;
   cursor: pointer;
 }
 
+.action-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+/* ================= Buttons ================= */
 button {
   background: linear-gradient(135deg, #1e90ff, #00cfff);
   color: #fff;
   border: none;
-  padding: 12px 24px;
+  padding: 12px 22px;
   border-radius: 14px;
   font-size: 1rem;
   font-weight: bold;
@@ -80,8 +118,8 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* ================= Game Section ================= */
-#game {
+/* ================= Game Area ================= */
+.game {
   margin-top: 20px;
   text-align: center;
 }
@@ -132,46 +170,42 @@ button:disabled {
 }
 
 /* ================= Timer ================= */
-.timer-container {
+.utility-row {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.timer-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+.timer-wrap {
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin-bottom: 8px;
-  background: radial-gradient(circle, #001a33, #000a14);
-  box-shadow: 0 0 15px #00cfff88 inset;
+  gap: 10px;
+}
+
+.circular-timer {
+  width: 50px;
+  height: 50px;
+}
+
+.circular-timer svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.arc {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 
 #timeDisplay {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
   color: #00cfff;
   text-shadow: 0 0 6px #1e90ff;
-}
-
-/* ================= Scoreboard ================= */
-#scoreboard {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 15px;
-  padding: 10px;
-  background: rgba(0, 30, 60, 0.5);
-  border-radius: 12px;
-}
-
-#scoreboard span {
-  font-weight: bold;
-  color: #a6d8ff;
-  text-shadow: 0 0 6px #00cfff99;
 }
 
 /* ================= Progress Bar ================= */
@@ -181,7 +215,7 @@ button:disabled {
   border-radius: 10px;
   overflow: hidden;
   height: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 #progressBar {
@@ -192,8 +226,8 @@ button:disabled {
   transition: width 0.4s ease;
 }
 
-/* ================= Result ================= */
-#result {
+/* ================= Result Section ================= */
+.result {
   text-align: center;
   padding: 20px;
 }
@@ -217,7 +251,7 @@ button:disabled {
 }
 
 /* ================= Leaderboard ================= */
-#leaderboard {
+.leaderboard {
   margin-top: 25px;
 }
 
@@ -237,6 +271,14 @@ button:disabled {
   text-shadow: 0 0 6px #1e90ff55;
 }
 
+/* ================= Footer ================= */
+footer.credits {
+  text-align: center;
+  margin-top: 25px;
+  font-size: 0.9rem;
+  color: #a6d8ff88;
+}
+
 /* ================= Animations ================= */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(15px); }
@@ -244,12 +286,18 @@ button:disabled {
 }
 
 /* ================= Responsivo ================= */
-@media (max-width: 600px) {
-  .choice-btn {
-    font-size: 0.9rem;
-    padding: 10px;
-  }
+@media (max-width: 700px) {
   #choices {
     grid-template-columns: 1fr;
+  }
+  .controls {
+    flex-direction: column;
+  }
+  .utility-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  #playerName {
+    width: 100%;
   }
 }

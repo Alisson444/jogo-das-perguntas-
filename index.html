@@ -8,20 +8,23 @@
 </head>
 <body>
   <canvas id="confettiCanvas" class="confetti"></canvas>
+
   <main class="app">
+    <!-- Header -->
     <header class="brand">
       <div class="logo">
         <h1>Neon Quiz</h1>
         <p class="subtitle">História & Geografia — Neon Edition</p>
       </div>
       <div class="top-controls">
-        <button id="soundToggle" class="icon">🔊</button>
+        <button id="soundToggle" class="icon" aria-label="Alternar som">🔊</button>
         <button id="exportRank" class="small btn">Exportar ranking</button>
-        <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <input id="importFile" type="file" accept="application/json" hidden />
         <button id="importBtn" class="small btn">Importar ranking</button>
       </div>
     </header>
 
+    <!-- Configurações e Controles -->
     <section class="controls">
       <div class="scorebox">
         <div>Score: <span id="score">0</span></div>
@@ -29,10 +32,10 @@
       </div>
 
       <div class="settings">
-        <label>Qtd perguntas: <span id="qCountLabel">10</span></label>
+        <label for="qCount">Qtd perguntas: <span id="qCountLabel">10</span></label>
         <input id="qCount" type="range" min="5" max="50" value="10" />
 
-        <label>Tempo por pergunta (s): <span id="timerLabel">20</span></label>
+        <label for="timer">Tempo por pergunta (s): <span id="timerLabel">20</span></label>
         <input id="timer" type="range" min="5" max="60" value="20" />
 
         <div class="action-row">
@@ -42,19 +45,17 @@
       </div>
     </section>
 
+    <!-- Área do Jogo -->
     <section class="game hidden" id="game">
       <div class="hud">
         <div class="progress">
           <div id="progressBar" class="progress-bar"></div>
         </div>
-
         <div class="meta">Pergunta <span id="current">1</span> / <span id="total">10</span></div>
       </div>
 
       <div class="question-area">
         <h2 id="question">Pergunta será aqui</h2>
-        <img id="qImage" class="q-image hidden" alt="imagem da pergunta" />
-
         <div id="choices" class="choices"></div>
 
         <div class="utility-row">
@@ -62,7 +63,7 @@
             <div id="circularTimer" class="circular-timer" aria-hidden="true">
               <svg viewBox="0 0 36 36">
                 <path class="bg" d="M18 2a16 16 0 1 1 0 32a16 16 0 1 1 0-32" />
-                <path id="timerArc" class="arc" d=""/>
+                <path id="timerArc" class="arc" d="" />
               </svg>
             </div>
             <div id="timeDisplay">00:20</div>
@@ -75,10 +76,10 @@
 
           <div class="small-info">Pontos: <span id="lastPoints">0</span></div>
         </div>
-
       </div>
     </section>
 
+    <!-- Resultados -->
     <section id="result" class="result hidden">
       <h2>Resultados</h2>
       <p>Você fez <strong id="finalScore">0</strong> pontos</p>
@@ -95,6 +96,7 @@
       </div>
     </section>
 
+    <!-- Ranking -->
     <aside class="leaderboard">
       <h3>Ranking local</h3>
       <ol id="leaderList"></ol>
@@ -103,9 +105,10 @@
       </div>
     </aside>
 
+    <!-- Rodapé -->
     <footer class="credits">Feito com ⚡ por você — tema neon</footer>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
