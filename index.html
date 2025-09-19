@@ -3,35 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Neon Quiz — Versão Pro</title>
+  <meta name="theme-color" content="#07070b">
+  <title>Neon Quiz — História & Geografia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <canvas id="confettiCanvas" class="confetti"></canvas>
+  <!-- Confetti canvas (renderizado quando necessário) -->
+  <canvas id="confettiCanvas" class="confetti" aria-hidden="true"></canvas>
 
-  <main class="app">
-    <!-- Header -->
-    <header class="brand">
+  <main class="app" role="main">
+    <header class="brand" role="banner">
       <div class="logo">
         <h1>Neon Quiz</h1>
-        <p class="subtitle">História & Geografia — Neon Edition</p>
+        <p class="subtitle">História &amp; Geografia</p>
       </div>
-      <div class="top-controls">
-        <button id="soundToggle" class="icon" aria-label="Alternar som">🔊</button>
-        <button id="exportRank" class="small btn">Exportar ranking</button>
-        <input id="importFile" type="file" accept="application/json" hidden />
-        <button id="importBtn" class="small btn">Importar ranking</button>
+
+      <div class="top-controls" aria-hidden="false">
+        <!-- Sound toggle and small pause control (pause used by script) -->
+        <button id="soundToggle" class="icon" aria-pressed="true" aria-label="Alternar som">🔊</button>
+        <button id="pauseBtn" class="icon small" aria-label="Pausar temporizador">⏸️</button>
       </div>
     </header>
 
-    <!-- Configurações e Controles -->
-    <section class="controls">
-      <div class="scorebox">
+    <section class="controls" aria-labelledby="settingsTitle">
+      <div class="scorebox" aria-live="polite">
         <div>Score: <span id="score">0</span></div>
         <div>Streak: <span id="streak">0</span></div>
       </div>
 
-      <div class="settings">
+      <div class="settings" id="settings" aria-label="Configurações do jogo">
+        <h2 id="settingsTitle" class="hidden">Configurações</h2>
+
         <label for="qCount">Qtd perguntas: <span id="qCountLabel">10</span></label>
         <input id="qCount" type="range" min="5" max="50" value="10" />
 
@@ -40,15 +45,14 @@
 
         <div class="action-row">
           <button id="startBtn" class="btn">Começar</button>
-          <button id="pauseBtn" class="btn muted">Pausar</button>
+          <button id="quickBtn" class="btn muted" title="Jogar 5 perguntas rápidas">Rápido</button>
         </div>
       </div>
     </section>
 
-    <!-- Área do Jogo -->
-    <section class="game hidden" id="game">
+    <section class="game hidden" id="game" aria-live="polite">
       <div class="hud">
-        <div class="progress">
+        <div class="progress" aria-hidden="true">
           <div id="progressBar" class="progress-bar"></div>
         </div>
         <div class="meta">Pergunta <span id="current">1</span> / <span id="total">10</span></div>
@@ -56,12 +60,12 @@
 
       <div class="question-area">
         <h2 id="question">Pergunta será aqui</h2>
-        <div id="choices" class="choices"></div>
+        <div id="choices" class="choices" role="list"></div>
 
         <div class="utility-row">
-          <div class="timer-wrap">
+          <div class="timer-wrap" aria-hidden="false">
             <div id="circularTimer" class="circular-timer" aria-hidden="true">
-              <svg viewBox="0 0 36 36">
+              <svg viewBox="0 0 36 36" role="img" aria-label="Tempo restante">
                 <path class="bg" d="M18 2a16 16 0 1 1 0 32a16 16 0 1 1 0-32" />
                 <path id="timerArc" class="arc" d="" />
               </svg>
@@ -69,26 +73,20 @@
             <div id="timeDisplay">00:20</div>
           </div>
 
-          <div class="tools">
-            <button id="lifeline5050" class="small btn">50/50</button>
-            <button id="skipBtn" class="small btn">Pular (-200 pts)</button>
-          </div>
-
           <div class="small-info">Pontos: <span id="lastPoints">0</span></div>
         </div>
       </div>
     </section>
 
-    <!-- Resultados -->
-    <section id="result" class="result hidden">
+    <section id="result" class="result hidden" aria-live="polite">
       <h2>Resultados</h2>
       <p>Você fez <strong id="finalScore">0</strong> pontos</p>
       <p>Acertos: <span id="finalCorrect">0</span> / <span id="finalTotal">0</span></p>
 
-      <div class="save-row">
-        <input id="playerName" placeholder="Seu nome (max 12)" maxlength="12" />
+      <form class="save-row" onsubmit="return false;">
+        <input id="playerName" placeholder="Seu nome (max 12)" maxlength="12" aria-label="Seu nome" />
         <button id="saveBtn" class="btn">Salvar no ranking</button>
-      </div>
+      </form>
 
       <div class="result-actions">
         <button id="playAgain" class="btn">Jogar novamente</button>
@@ -96,19 +94,38 @@
       </div>
     </section>
 
-    <!-- Ranking -->
-    <aside class="leaderboard">
-      <h3>Ranking local</h3>
+    <aside class="leaderboard" aria-labelledby="boardTitle">
+      <h3 id="boardTitle">Ranking local</h3>
       <ol id="leaderList"></ol>
       <div class="board-actions">
         <button id="clearBoard" class="btn small muted">Limpar ranking</button>
       </div>
     </aside>
 
-    <!-- Rodapé -->
-    <footer class="credits">Feito com ⚡ por você — tema neon</footer>
   </main>
 
+<!-- Áudio principal (single player) -->
+  <audio id="bg-music" preload="auto" loop playsinline>
+    <source src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" type="audio/mp3">
+    Seu navegador não suporta o elemento de áudio.
+  </audio>
+ <audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+<audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" preload="auto"></audio>
+
   <script src="script.js" defer></script>
+  <script>
+    // Pequeno helper para o botão Rápido — predefine 5 perguntas e inicia
+    document.addEventListener('DOMContentLoaded', () => {
+      const quick = document.getElementById('quickBtn');
+      if (quick) quick.addEventListener('click', () => {
+        const range = document.getElementById('qCount');
+        range.value = 5;
+        document.getElementById('qCountLabel').textContent = '5';
+        document.getElementById('timer').value = 15;
+        document.getElementById('timerLabel').textContent = '15';
+        document.getElementById('startBtn').click();
+      });
+    });
+  </script>
 </body>
 </html>

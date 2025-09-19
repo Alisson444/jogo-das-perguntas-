@@ -1,3 +1,4 @@
+// script.js — Neon Quiz (com sons, timer e sliders revisados)
 
 const questions = [
   { q: "Qual era o nome do imperador romano que governava durante o grande incêndio de Roma em 64 d.C.?", choices: ["Nero", "Calígula", "Augusto", "Trajano"], a: 0 },
@@ -56,19 +57,21 @@ const questions = [
   { q: "Qual ilha é a maior do mundo?", choices: ["Groenlândia", "Madagascar", "Nova Guiné", "Borneo"], a: 0 },
   { q: "Em que ano começou a Guerra dos Cem Anos?", choices: ["1337", "1415", "1453", "1302"], a: 0 },
   { q: "Qual é a capital da Noruega?", choices: ["Oslo", "Estocolmo", "Helsinque", "Copenhague"], a: 0 },
-  { q: "Qual país da América Central possui maior população?", choices: ["Guatemala", "Honduras", "Costa Rica", "Panamá"], a: 0 }
-]; 
+  { q: "Qual país da América Central possui maior população?", choices: ["Guatemala", "Honduras", "Costa Rica", "Panamá"], a: 0 }];
 
-// ================== Variáveis Globais ==================
+const LEADER_KEY = "neonquiz_leaderboard_v1";
+
 let shuffledQuestions = [];
 let currentIndex = 0;
 let score = 0;
 let streak = 0;
 let timerDuration = 20;
 let timerInterval = null;
-let lifelineUsed = false;
+let correctCount = 0;
+let displayedChoices = [];
+let soundEnabled = true;
+let audioCtx = null;
 
-// ================== Seleção de Elementos ==================
 const scoreEl = document.getElementById("score");
 const streakEl = document.getElementById("streak");
 const qCount = document.getElementById("qCount");
@@ -76,7 +79,6 @@ const qCountLabel = document.getElementById("qCountLabel");
 const timerInput = document.getElementById("timer");
 const timerLabel = document.getElementById("timerLabel");
 const startBtn = document.getElementById("startBtn");
-const pauseBtn = document.getElementById("pauseBtn");
 const gameEl = document.getElementById("game");
 const questionEl = document.getElementById("question");
 const choicesEl = document.getElementById("choices");
@@ -85,9 +87,9 @@ const currentEl = document.getElementById("current");
 const totalEl = document.getElementById("total");
 const timeDisplay = document.getElementById("timeDisplay");
 const timerArc = document.getElementById("timerArc");
-const lifeline5050 = document.getElementById("lifeline5050");
-const skipBtn = document.getElementById("skipBtn");
 const lastPointsEl = document.getElementById("lastPoints");
+const soundToggle = document.getElementById("soundToggle");
+const bgAudio = document.getElementById("bg-music");
 
 const resultEl = document.getElementById("result");
 const finalScoreEl = document.getElementById("finalScore");
@@ -100,25 +102,90 @@ const shareBtn = document.getElementById("shareScore");
 
 const leaderList = document.getElementById("leaderList");
 const clearBoardBtn = document.getElementById("clearBoard");
-const exportBtn = document.getElementById("exportRank");
-const importBtn = document.getElementById("importBtn");
-const importFile = document.getElementById("importFile");
 
-
-// ================== Utilitários ==================
+// -------------------- FUNÇÕES AUXILIARES --------------------
 function shuffle(array) {
-  return array.sort(() => Math.random() - 0.5);
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 }
 
 function formatTime(sec) {
-  const m = String(Math.floor(sec / 60)).padStart(2,"0");
-  const s = String(sec % 60).padStart(2,"0");
+  const m = String(Math.floor(sec / 60)).padStart(2, "0");
+  const s = String(sec % 60).padStart(2, "0");
   return `${m}:${s}`;
 }
 
+function ensureAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playCorrect() {
+  if (!soundEnabled) return;
+  ensureAudio();
+  const now = audioCtx.currentTime;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(660, now);
+  g.gain.setValueAtTime(0, now);
+  o.connect(g);
+  g.connect(audioCtx.destination);
+  g.gain.linearRampToValueAtTime(0.12, now + 0.01);
+  o.frequency.exponentialRampToValueAtTime(990, now + 0.18);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+  o.start(now);
+  o.stop(now + 0.4);
+}
+
+function playWrong() {
+  if (!soundEnabled) return;
+  ensureAudio();
+  const now = audioCtx.currentTime;
+  const bufferSize = audioCtx.sampleRate * 0.12;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const band = audioCtx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.setValueAtTime(200, now);
+  band.Q.setValueAtTime(1, now);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+  noise.connect(band);
+  band.connect(g);
+  g.connect(audioCtx.destination);
+  noise.start(now);
+  noise.stop(now + 0.13);
+}
+
+function tryPlayBg() {
+  if (!soundEnabled || !bgAudio) return;
+  bgAudio.volume = 0.12;
+  bgAudio.currentTime = 0;
+  const p = bgAudio.play();
+  if (p && p.catch) p.catch(() => {});
+}
+
+function tryPauseBg() {
+  if (!bgAudio) return;
+  try { bgAudio.pause(); } catch {}
+}
+
+// -------------------- GAMEPLAY --------------------
 function updateProgress() {
-  progressBar.style.width = `${((currentIndex) / shuffledQuestions.length) * 100}%`;
-  currentEl.textContent = currentIndex + 1;
+  const total = shuffledQuestions.length || 1;
+  progressBar.style.width = `${(currentIndex / total) * 100}%`;
+  currentEl.textContent = Math.min(currentIndex + 1, shuffledQuestions.length);
   totalEl.textContent = shuffledQuestions.length;
 }
 
@@ -127,18 +194,15 @@ function updateScoreDisplay() {
   streakEl.textContent = streak;
 }
 
-// ================== Timer ==================
 function startTimer() {
   clearInterval(timerInterval);
   let timeLeft = timerDuration;
   timeDisplay.textContent = formatTime(timeLeft);
   updateTimerArc(1);
-
   timerInterval = setInterval(() => {
     timeLeft--;
     timeDisplay.textContent = formatTime(timeLeft);
     updateTimerArc(timeLeft / timerDuration);
-
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       handleAnswer(-1);
@@ -154,37 +218,47 @@ function updateTimerArc(ratio) {
   timerArc.style.strokeDashoffset = circumference * (1 - ratio);
 }
 
-// ================== Game Flow ==================
 function startGame() {
-  shuffledQuestions = shuffle([...questions]).slice(0, parseInt(qCount.value));
+  timerDuration = parseInt(timerInput.value, 10) || 20;
+  shuffledQuestions = shuffle([...questions]).slice(0, parseInt(qCount.value, 10));
   currentIndex = 0;
   score = 0;
   streak = 0;
-  lifelineUsed = false;
-
+  correctCount = 0;
+  displayedChoices = [];
   updateScoreDisplay();
   lastPointsEl.textContent = "0";
-
   resultEl.classList.add("hidden");
   gameEl.classList.remove("hidden");
-
+  if (soundEnabled) {
+    try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch {}
+    tryPlayBg();
+  }
   showQuestion();
 }
 
 function showQuestion() {
   clearInterval(timerInterval);
-  const q = shuffledQuestions[currentIndex];
-  questionEl.textContent = q.q;
   choicesEl.innerHTML = "";
-
-  q.choices.forEach((choice, i) => {
+  displayedChoices = [];
+  const q = shuffledQuestions[currentIndex];
+  if (!q) { endGame(); return; }
+  questionEl.textContent = q.q;
+  const pairs = q.choices.map((text, idx) => ({ text, orig: idx }));
+  const shuffledPairs = shuffle(pairs);
+  displayedChoices = shuffledPairs;
+  shuffledPairs.forEach((item) => {
     const btn = document.createElement("button");
+    btn.type = "button";
     btn.className = "choice-btn";
-    btn.textContent = choice;
-    btn.onclick = () => handleAnswer(i);
+    btn.dataset.orig = item.orig;
+    btn.textContent = item.text;
+    btn.onclick = () => {
+      try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch {}
+      handleAnswer(parseInt(btn.dataset.orig, 10));
+    };
     choicesEl.appendChild(btn);
   });
-
   updateProgress();
   startTimer();
 }
@@ -193,138 +267,173 @@ function handleAnswer(selected) {
   clearInterval(timerInterval);
   const q = shuffledQuestions[currentIndex];
   const correct = q.a;
-
   let gained = 0;
-  const btns = document.querySelectorAll(".choice-btn");
+  const btns = Array.from(document.querySelectorAll(".choice-btn"));
 
   if (selected === correct) {
     streak++;
     gained = 100 + (streak * 10);
     score += gained;
-    btns[correct].classList.add("correct");
+    correctCount++;
+    const targetBtn = btns.find(b => parseInt(b.dataset.orig, 10) === correct);
+    if (targetBtn) targetBtn.classList.add("correct");
     lastPointsEl.textContent = `+${gained}`;
+    playCorrect();
   } else {
     streak = 0;
-    if(selected >= 0) btns[selected].classList.add("wrong");
-    btns[correct].classList.add("correct");
+    if (selected >= 0) {
+      const selBtn = btns.find(b => parseInt(b.dataset.orig, 10) === selected);
+      if (selBtn) selBtn.classList.add("wrong");
+    }
+    const correctBtn = btns.find(b => parseInt(b.dataset.orig, 10) === correct);
+    if (correctBtn) correctBtn.classList.add("correct");
     lastPointsEl.textContent = "0";
+    playWrong();
   }
 
+  btns.forEach(b => b.disabled = true);
   updateScoreDisplay();
-
   setTimeout(() => {
     currentIndex++;
-    if(currentIndex < shuffledQuestions.length){
+    if (currentIndex < shuffledQuestions.length) {
       showQuestion();
     } else {
       endGame();
     }
-  }, 1200);
+  }, 1000);
 }
 
 function endGame() {
   gameEl.classList.add("hidden");
   resultEl.classList.remove("hidden");
-
   finalScoreEl.textContent = score;
-  finalCorrectEl.textContent = shuffledQuestions.filter(q => q.a >= 0).length;
+  finalCorrectEl.textContent = correctCount;
   finalTotalEl.textContent = shuffledQuestions.length;
+  tryPauseBg();
 }
 
-// ================== Lifelines ==================
-lifeline5050.addEventListener("click", () => {
-  if(lifelineUsed) return;
-  lifelineUsed = true;
+// -------------------- RANKING --------------------
+function loadBoard() {
+  try {
+    const raw = localStorage.getItem(LEADER_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) { localStorage.removeItem(LEADER_KEY); return []; }
+}
 
-  const q = shuffledQuestions[currentIndex];
-  const wrongIndices = q.choices.map((_,i) => i).filter(i => i !== q.a);
-  shuffle(wrongIndices).slice(0,2).forEach(i => {
-    const btns = document.querySelectorAll(".choice-btn");
-    if(btns[i]) btns[i].disabled = true;
-  });
-});
+function saveBoard(board) {
+  try { localStorage.setItem(LEADER_KEY, JSON.stringify(board)); } catch (err) { console.error(err); }
+}
 
-skipBtn.addEventListener("click", () => {
-  if(score >= 200){
-    score -= 200;
-    updateScoreDisplay();
-    currentIndex++;
-    if(currentIndex < shuffledQuestions.length){
-      showQuestion();
-    } else {
-      endGame();
-    }
-  }
-});
-
-// ================== Ranking ==================
-function saveScore() {
-  const name = playerNameEl.value.trim() || "Jogador";
-  const board = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-  board.push({ name, score });
-  board.sort((a,b)=>b.score-a.score);
-  localStorage.setItem("leaderboard", JSON.stringify(board));
-  renderBoard();
+function escapeHtml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function renderBoard() {
-  const board = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  const board = loadBoard();
   leaderList.innerHTML = "";
-  board.slice(0,10).forEach(item => {
+  if (!board.length) {
+    const p = document.createElement("p");
+    p.style.color = "var(--muted)";
+    p.style.margin = "8px 0";
+    p.textContent = "Sem registros ainda — jogue e salve seu primeiro placar!";
+    leaderList.appendChild(p);
+    return;
+  }
+  board.slice(0, 10).forEach((item, index) => {
     const li = document.createElement("li");
-    li.textContent = `${item.name} — ${item.score} pts`;
+    const date = item.date ? new Date(item.date) : null;
+    li.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>${index + 1}. ${escapeHtml(item.name)}</strong> — ${item.score} pts</div>
+        <div style="opacity:0.8;font-size:0.9em">${date ? date.toLocaleDateString() : ""}</div>
+      </div>`;
     leaderList.appendChild(li);
   });
 }
 
-function clearBoard() {
-  localStorage.removeItem("leaderboard");
-  renderBoard();
+const correctSound = document.getElementById("correctSound");
+const wrongSound = document.getElementById("wrongSound");
+
+function playCorrect() {
+  if (!soundEnabled) return;
+  correctSound.currentTime = 0;
+  correctSound.play();
 }
 
-function exportBoard() {
-  const data = localStorage.getItem("leaderboard") || "[]";
-  const blob = new Blob([data],{type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "ranking.json";
-  a.click();
+function playWrong() {
+  if (!soundEnabled) return;
+  wrongSound.currentTime = 0;
+  wrongSound.play();
+}
+function handleAnswer(selected) {
+  clearInterval(timerInterval);
+  const q = shuffledQuestions[currentIndex];
+  const correct = q.a;
+  const btns = Array.from(document.querySelectorAll(".choice-btn"));
+  let gained = 0;
+
+  if (selected === correct) {
+    streak++;
+    gained = 100 + streak * 10;
+    score += gained;
+    correctCount++;
+    const targetBtn = btns.find(b => parseInt(b.dataset.orig, 10) === correct);
+    if (targetBtn) targetBtn.classList.add("correct");
+    lastPointsEl.textContent = `+${gained}`;
+    playCorrect(); // <-- som de acerto
+  } else {
+    streak = 0;
+    if (selected >= 0) {
+      const selBtn = btns.find(b => parseInt(b.dataset.orig, 10) === selected);
+      if (selBtn) selBtn.classList.add("wrong");
+    }
+    const correctBtn = btns.find(b => parseInt(b.dataset.orig, 10) === correct);
+    if (correctBtn) correctBtn.classList.add("correct");
+    lastPointsEl.textContent = "0";
+    playWrong(); // <-- som de erro
+  }
+
+  btns.forEach(b => b.disabled = true);
+  updateScoreDisplay();
+
+  setTimeout(() => {
+    currentIndex++;
+    if (currentIndex < shuffledQuestions.length) {
+      showQuestion();
+    } else {
+      endGame();
+    }
+  }, 1000);
 }
 
-function importBoard(e) {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(evt){
-    localStorage.setItem("leaderboard", evt.target.result);
-    renderBoard();
-  };
-  reader.readAsText(file);
-}
 
-// ================== Event Listeners ==================
-qCount.addEventListener("input", ()=> qCountLabel.textContent = qCount.value);
-timerInput.addEventListener("input", ()=>{
-  timerLabel.textContent = timerInput.value;
-  timerDuration = parseInt(timerInput.value);
-});
-
+// -------------------- EVENTOS --------------------
 startBtn.addEventListener("click", startGame);
-pauseBtn.addEventListener("click", ()=> clearInterval(timerInterval));
-saveBtn.addEventListener("click", saveScore);
 playAgainBtn.addEventListener("click", startGame);
-
-shareBtn.addEventListener("click", ()=>{
-  const text = `Fiz ${score} pontos no Neon Quiz!`;
-  navigator.clipboard.writeText(text);
-  alert("Resultado copiado para compartilhar!");
+saveBtn.addEventListener("click", () => {
+  const name = playerNameEl.value.trim() || "Anon";
+  const board = loadBoard();
+  board.push({ name, score, date: new Date().toISOString() });
+  board.sort((a, b) => b.score - a.score);
+  saveBoard(board);
+  renderBoard();
 });
 
-clearBoardBtn.addEventListener("click", clearBoard);
-exportBtn.addEventListener("click", exportBoard);
-importBtn.addEventListener("click", ()=> importFile.click());
-importFile.addEventListener("change", importBoard);
+clearBoardBtn.addEventListener("click", () => {
+  localStorage.removeItem(LEADER_KEY);
+  renderBoard();
+});
 
-// ================== Init ==================
+soundToggle.addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  soundToggle.textContent = soundEnabled ? "🔊 Som: ON" : "🔇 Som: OFF";
+  if (!soundEnabled) tryPauseBg();
+});
+
+qCount.addEventListener("input", () => { qCountLabel.textContent = qCount.value; });
+timerInput.addEventListener("input", () => { timerLabel.textContent = timerInput.value; });
+
+// iniciar leaderboard
 renderBoard();
